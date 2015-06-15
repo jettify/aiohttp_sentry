@@ -18,7 +18,7 @@ def setup(app, app_key=APP_KEY, dsn='', tags=None, processors=None,
         dsn = 'aiohttp+' + dsn
     context = {'sys.argv': sys.argv[:]}
     client = Client(dsn, exclude_paths=exclude_paths,
-                          processors=processors, tags=tags, context=context)
+                    processors=processors, tags=tags, context=context)
     app[app_key] = client
     return client
 
@@ -49,7 +49,7 @@ def request_parameters(request):
 def middleware(app, handler):
 
     @asyncio.coroutine
-    def middleware(request):
+    def sentry_middleware(request):
         try:
             response = yield from handler(request)
             return response
@@ -66,4 +66,4 @@ def middleware(app, handler):
                 sentry.captureException(exc_info, data=data)
             raise exc
 
-    return middleware
+    return sentry_middleware
