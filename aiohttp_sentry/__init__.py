@@ -12,8 +12,8 @@ __all__ = ['setup', 'get_sentry', 'middleware', 'APP_KEY']
 APP_KEY = 'aiohttp_sentry_client'
 
 
-def setup(app, app_key=APP_KEY, dsn='', tags=None, processors=None,
-          exclude_paths=None):
+def setup(app, dsn='', tags=None, processors=None, exclude_paths=None,
+          app_key=APP_KEY):
     if dsn and not dsn.startswith('aiohttp'):
         dsn = 'aiohttp+' + dsn
     context = {'sys.argv': sys.argv[:]}
