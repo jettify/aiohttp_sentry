@@ -3,7 +3,7 @@ import sys
 from pprint import saferepr
 
 from aiohttp import web
-from raven import Client
+from .client import AioClient
 
 
 __version__ = '0.0.1'
@@ -14,11 +14,16 @@ APP_KEY = 'aiohttp_sentry_client'
 
 def setup(app, dsn='', tags=None, processors=None, exclude_paths=None,
           app_key=APP_KEY):
+    loop = app.loop
+
     if dsn and not dsn.startswith('aiohttp'):
         dsn = 'aiohttp+' + dsn
+
     context = {'sys.argv': sys.argv[:]}
-    client = Client(dsn, exclude_paths=exclude_paths,
-                    processors=processors, tags=tags, context=context)
+
+    client = AioClient(dsn, exclude_paths=exclude_paths,
+                       processors=processors, tags=tags, context=context,
+                       loop=loop)
     app[app_key] = client
     return client
 
@@ -30,9 +35,7 @@ def get_sentry(app, *, app_key=APP_KEY):
 @asyncio.coroutine
 def request_parameters(request):
     data = {}
-    if request.method in ('POST', 'PUT', 'PATCH'):
-        data = yield from request.post()
-
+    yield from request.post()
     data.update({
         'url': "http://{}{}".format(request.host, request.path),
         'method': request.method,
@@ -60,10 +63,11 @@ def middleware(app, handler):
 
         except Exception as exc:
             sentry = get_sentry(app)
-            if sentry.dsn:
+            if sentry.is_enabled():
                 exc_info = sys.exc_info()
                 data = yield from request_parameters(request)
-                sentry.captureException(exc_info, data=data)
+                fut = sentry.captureException(exc_info, data=data)
+                yield from fut
             raise exc
 
     return sentry_middleware
